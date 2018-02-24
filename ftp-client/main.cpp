@@ -50,7 +50,9 @@ void write(string text, int color) {
 int processCommand(string command) {
 
 	if (command == "/gethelp") {
-		cout << "To connect to an FTP server, type in '/connect' and follow instructions" << endl << endl;
+		cout << "To connect to an FTP server, type '/set' to specify its parameters" << endl;
+		cout << "After you've set the parameters, type '/connect'" << endl << endl;
+
 		return 0;
 	}
 	if (command == "/set") {
@@ -79,14 +81,18 @@ int processCommand(string command) {
 		return 0;
 	}
 	if (command == "/connect") {
-		cout << "connecting... ";
+
+		write("[login in] ", DARKPURPLE);
+		cout << "checking hostname ... ";
 
 		hostent * host;   
 
 		host = gethostbyname(hostname.c_str());
 
 		if (host == NULL) {
+			cout << endl << endl;
 			writeLine("something went wrong while getting the IP address...\ncheck if the hostname has been written properly and try again", RED);
+			cout << endl;
 			return 0;
 		}
 		
@@ -105,19 +111,55 @@ int processCommand(string command) {
 		// connecting to the socket
 		connect(serverSocket, (SOCKADDR*)&address, sizeof(address));
 
-		writeLine("done!", LIGHTGREEN);
-
 		char buffer[1024];
 
 		recv(serverSocket, buffer, 1024, 0);
 		string responseCode = getResponseCode(buffer);
 
-		if (responseCode == "220") {
-			isConnectionEstablished = true;
+		if (responseCode != "220") {
+			cout << "the server responded with a code different from 220";
+			return 0;
+		}
+
+		isConnectionEstablished = true;
+		writeLine("okay", LIGHTGREEN);
+
+		string login = "USER " + username + "\r\n";
+		string pass = "PASS " + password + "\r\n"; 
+
+		write("[login in] ", DARKPURPLE);
+		cout << "checking username ... ";
+
+		send(serverSocket, login.c_str(), login.length(), 0);
+		recv(serverSocket, buffer, 1024, 0);
+
+		if (getResponseCode(buffer) == "331") {
+			writeLine("okay", LIGHTGREEN);
+		}
+		else {
+			writeLine("wrong", LIGHTRED);
+			cout << endl;
+			return 0;
 		}
 		
-		cout << endl;
+		write("[login in] ", DARKPURPLE);
+		cout << "checking password ... ";
 
+		send(serverSocket, pass.c_str(), pass.length(), 0);
+		recv(serverSocket, buffer, 1024, 0);
+
+		if (getResponseCode(buffer) == "230") {
+			writeLine("okay", LIGHTGREEN);
+			cout << endl;
+		}
+		else {
+			writeLine("wrong", LIGHTRED);
+			cout << endl;
+			return 0;
+		}
+
+		cout << "You have logged on, you are able to continue now" << endl << endl;
+		
 		return 0;
 	}
 
@@ -137,13 +179,10 @@ int main()
 
 	// speedtest.tele2.net / ftp.hq.nasa.gov
 
-	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | 15));
-	cout << "Welcome to the FTP-client, type in";
-	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | 3));
-	cout << " '/gethelp' ";
-	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | 15));
-	cout << "to see what you can do" << endl << endl;
-	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | 7));
+	write("Welcome to the FTP-client, type in", LIGHTWHITE);
+	write("'/gethelp'", OCEANIC);
+	writeLine("to see what you can do", LIGHTWHITE);
+	cout << endl;
 
 	string command;
 
