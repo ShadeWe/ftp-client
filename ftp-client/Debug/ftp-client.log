@@ -1,2 +1,3 @@
 ﻿  main.cpp
+c:\users\shade\desktop\projects\ftp-client\ftp-client\main.cpp(124): warning C4715: processCommand: значение возвращается не при всех путях выполнения
   ftp-client.vcxproj -> C:\Users\Shade\Desktop\projects\ftp-client\Debug\ftp-client.exe
