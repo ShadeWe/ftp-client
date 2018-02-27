@@ -16,9 +16,10 @@ string username;
 string password;
 string port;
 
-char ip_address[15];		// contains the ip address of a domain
+char ip_address[15];					// contains the ip address of a domain (xxx.xxx.xxx.xxx)
 
-bool isConnectionEstablished = false;
+bool isConnectionEstablished = false;	// true when the ip address was obtained, user has logged in and so on.
+bool isDataSpecified = false;			// true when all the fields were specified by a user using /set
 
 string getResponseCode(char * buffer) {
 
@@ -31,27 +32,61 @@ string getResponseCode(char * buffer) {
 	return response;
 }
 
-void writeLine(string text, int color) {
-
+void writeLine(string text, int color) 
+{
 	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | color));
 	cout << text << endl;
-	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | 15));
+	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | WHITE));
+}
+
+int getDataPort(char * buffer) {
+
+	string message = buffer;
+	string values[2];
+
+	int writting = 1;
+	for (int i = message.find(')') - 1; true; i--) {
+
+		if (message[i] != ',') {
+			values[writting] = message[i] + values[writting];
+		}
+		else {
+			writting--;
+
+			if (writting < 0) {
+				break;
+			}
+		}
+
+	}
+
+	return stoi(values[0]) * 256 + stoi(values[1]);
 
 }
 
-void write(string text, int color) {
-
+void write(string text, int color) 
+{
 	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | color));
 	cout << text;
-	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | 15));
-
+	SetConsoleTextAttribute(hConsole, (WORD)((0 << 4) | WHITE));
 }
 
 int processCommand(string command) {
 
-	if (command == "/gethelp") {
-		cout << "To connect to an FTP server, type '/set' to specify its parameters" << endl;
-		cout << "After you've set the parameters, type '/connect'" << endl << endl;
+	if (command == "/commands") {
+
+		write("/commands ", OCEANIC);
+		writeLine("shows all the commands of this program you can use", LIGHTWHITE);
+
+		write("/set ", OCEANIC);
+		writeLine("\t  set the parameters of an FTP server to connect to", LIGHTWHITE);
+
+		write("/connect ", OCEANIC);
+		write(" connect to an ftp server. That works only after all the required \n \t  parameters were specified (using ", LIGHTWHITE);
+		write("/set", OCEANIC);
+		writeLine(")", LIGHTWHITE);
+
+		cout << endl;
 
 		return 0;
 	}
@@ -75,12 +110,21 @@ int processCommand(string command) {
 
 
 		cout << endl;
-		writeLine("Check if you've set everything properly and type '/connect'", LIGHTWHITE);
+		write("Check if you've set everything properly and type ", WHITE);
+		writeLine("'/connect'", OCEANIC);
 		cout << endl;
+
+		isDataSpecified = true;
 
 		return 0;
 	}
 	if (command == "/connect") {
+
+		if (isDataSpecified == false) {
+			write("[hint] ", YELLOW);
+			cout << "please, type /set and specify the parameters of a server" << endl << endl;
+			return 0;
+		}
 
 		write("[login in] ", DARKPURPLE);
 		cout << "checking hostname ... ";
@@ -91,7 +135,8 @@ int processCommand(string command) {
 
 		if (host == NULL) {
 			cout << endl << endl;
-			writeLine("something went wrong while getting the IP address...\ncheck if the hostname has been written properly and try again", RED);
+			write("[error] ", RED);
+			writeLine("something went wrong while getting the IP address...\ncheck if the hostname has been written properly and try again", LIGHTWHITE);
 			cout << endl;
 			return 0;
 		}
@@ -121,7 +166,6 @@ int processCommand(string command) {
 			return 0;
 		}
 
-		isConnectionEstablished = true;
 		writeLine("okay", LIGHTGREEN);
 
 		string login = "USER " + username + "\r\n";
@@ -158,7 +202,13 @@ int processCommand(string command) {
 			return 0;
 		}
 
+		send(serverSocket, "PASV\r\n", 6, 0);	// entering passive mode
+		recv(serverSocket, buffer, 1024, 0);
+		int port = getDataPort(buffer);			// contains the port we have to connect to in order to get data from the server
+
 		cout << "You have logged on, you are able to continue now" << endl << endl;
+
+		isConnectionEstablished = true;
 		
 		return 0;
 	}
@@ -179,9 +229,9 @@ int main()
 
 	// speedtest.tele2.net / ftp.hq.nasa.gov
 
-	write("Welcome to the FTP-client, type in", LIGHTWHITE);
-	write("'/gethelp'", OCEANIC);
-	writeLine("to see what you can do", LIGHTWHITE);
+	write("Welcome to the FTP-client, type in ", WHITE);
+	write("'/commands'", OCEANIC);
+	writeLine(" to see what commands you can use", WHITE);
 	cout << endl;
 
 	string command;
