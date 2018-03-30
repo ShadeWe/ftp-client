@@ -1,7 +1,8 @@
 #include <string>
 #include <iostream>
 #include <winsock.h>
-
+#include <fstream>
+#include <iomanip>
 #include "Server.h"
 #include "coloredText.h"
 
@@ -158,15 +159,69 @@ int Server::Connect() {
 
 int Server::SendFTPcommand(string command) {
 
-	char buffer[2048];
+	char buffer[30000];
+
+	if (command.substr(0, 3) == "bin") {
+
+		send(serverSocket, "TYPE I\r\n", 8, 0);
+		recv(serverSocket, buffer, 100, 0);
+		
+		if (RetrieveResponseCode(buffer) == 200) {
+			cout << "entered binary mode" << endl;
+		}
+
+		memset(buffer, 0, 100);
+		return 0;
+	}
+
+	if (command.substr(0, 3) == "get") {
+
+		string filename = command.substr(4);
+		string ftpCommand = "RETR " + filename + "\r\n";
+
+		send(serverSocket, ftpCommand.c_str(), ftpCommand.length(), 0);
+
+		int iResult;
+		int size = 0;
+
+		do {
+			
+			iResult = recv(dataSocket, buffer + size, 30000 - size, 0);
+			if (iResult > 0) {
+				Write("[get] ", LIGHTWHITE);
+				printf("Bytes received: %d\n", iResult);
+				size = size + iResult;
+			}
+			else if (iResult == 0) {
+				Write("[get] ", LIGHTWHITE);
+				printf("Connection closed\n\n");
+			}
+			else {
+				Write("[get] ", LIGHTWHITE);
+				printf("recv failed: %d\n", WSAGetLastError());
+			}
+
+		} while (iResult > 0);
+
+		ofstream fout(filename, ios_base::binary);
+		fout.write(buffer, size);
+		fout.close();
+
+		memset(buffer, 0, 30000);
+		return 0;
+	}
 
 	if (command == "ls") {
+
 		send(serverSocket, "LIST\r\n", 6, 0);
 		int size = recv(dataSocket, buffer, 2048, 0);
 
 		string processedString(buffer);
 		processedString = processedString.substr(0, size);
 		cout << processedString << endl;
+
+		memset(buffer, 0, 2048);
+		return 0;
 	}
 
 	return 0;

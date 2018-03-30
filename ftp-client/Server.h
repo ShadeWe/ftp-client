@@ -29,4 +29,5 @@ public:
 	int RetrieveResponseCode(string buffer);
 	int Connect();
 	int SendFTPcommand(string command);
+
 };

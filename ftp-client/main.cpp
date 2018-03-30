@@ -38,7 +38,7 @@ int processCommand(string command) {
 
 		server.ObtainServerSettings();
 		server.Connect();
-		
+
 	}
 
 }
