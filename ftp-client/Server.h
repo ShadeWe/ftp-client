@@ -23,6 +23,8 @@ public:
 	string GetHostname();
 	bool GetConnectionState();
 	
+	string RetrieveMessage(char * buffer, int size);
+	int ConnectToDataport();
 	int ObtainServerSettings();
 	int RetrieveDataPort(string message);
 	char * RetrieveIPaddress(string domain);

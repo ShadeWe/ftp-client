@@ -6,6 +6,11 @@
 #include "Server.h"
 #include "coloredText.h"
 
+string Server::RetrieveMessage(char * buffer, int size) {
+	string buf = buffer;
+	return buf.substr(0, size);
+}
+
 int Server::ObtainServerSettings() {
 	Write("   hostname >> ", DARKPURPLE);
 	getline(cin, hostname);
@@ -61,7 +66,12 @@ char * Server::RetrieveIPaddress(string domain) {
 }
 
 int Server::RetrieveResponseCode(string buffer) {
-	return stoi(buffer.substr(0, 3));
+	try {
+		return stoi(buffer.substr(0, 3));
+	}
+	catch (invalid_argument) {
+		cout << "I can't :(";
+	}
 }
 
 int Server::Connect() {
@@ -130,10 +140,29 @@ int Server::Connect() {
 		WriteLine("\t\t\t\tokay", LIGHTGREEN);
 	}
 
-	send(serverSocket, "PASV\r\n", 6, 0);	// entering passive mode
-	recv(serverSocket, buffer, 1024, 0);
+	cout << "\n You have logged on, you are able to continue now" << endl << endl;
 
-	int dataPort = RetrieveDataPort(buffer);			// contains the port we have to connect to in order to get data from the server
+	isConnectionEstablished = true;
+
+}
+
+int Server::ConnectToDataport() {
+
+	char buffer[1024];
+
+	send(serverSocket, "PASV\r\n", 6, 0);				// entering passive mode
+	int size = recv(serverSocket, buffer, 1024, 0);
+	
+	cout << RetrieveMessage(buffer, size) << endl;
+	int dataPort;
+
+	if (RetrieveResponseCode(buffer) == 227) {
+		dataPort = RetrieveDataPort(buffer);			// contains the port we have to connect to in order to get data from the server
+	}
+	else {
+		cout << "an error occured, I can't download this file :(" << endl;
+		return -1;
+	}
 
 	SOCKADDR_IN dataSocketAddress;
 	dataSocketAddress.sin_addr.s_addr = inet_addr(ip_address);
@@ -151,38 +180,41 @@ int Server::Connect() {
 		return 0;
 	}
 
-	cout << "\n You have logged on, you are able to continue now" << endl << endl;
-
-	isConnectionEstablished = true;
-
+	memset(buffer, 0, 1024);
 }
 
 int Server::SendFTPcommand(string command) {
 
-	char buffer[30000];
-
 	if (command.substr(0, 3) == "bin") {
 
+		char buffer[200];
+		Write(" Entering the binary mode ... ", WHITE);
 		send(serverSocket, "TYPE I\r\n", 8, 0);
 		recv(serverSocket, buffer, 100, 0);
 		
 		if (RetrieveResponseCode(buffer) == 200) {
-			cout << "entered binary mode" << endl;
+			WriteLine("\t\t\t\t\tsuccess!\n", LIGHTGREEN);
 		}
 
-		memset(buffer, 0, 100);
 		return 0;
 	}
 
 	if (command.substr(0, 3) == "get") {
 
+		char buffer[30000];
+		char message[200];
+
+		ConnectToDataport();
+
 		string filename = command.substr(4);
 		string ftpCommand = "RETR " + filename + "\r\n";
 
 		send(serverSocket, ftpCommand.c_str(), ftpCommand.length(), 0);
+		int length = recv(serverSocket, message, 200, 0);
+		cout << RetrieveMessage(message, length) << endl;
 
-		int iResult;
 		int size = 0;
+		int iResult;
 
 		do {
 			
@@ -198,27 +230,41 @@ int Server::SendFTPcommand(string command) {
 			}
 			else {
 				Write("[get] ", LIGHTWHITE);
-				printf("recv failed: %d\n", WSAGetLastError());
+				printf("recv failed: %d\n\n", WSAGetLastError());
+				return 0;
 			}
 
 		} while (iResult > 0);
+
+		length = recv(serverSocket, message, 200, 0);
+		cout << RetrieveMessage(message, length) << endl;
 
 		ofstream fout(filename, ios_base::binary);
 		fout.write(buffer, size);
 		fout.close();
 
-		memset(buffer, 0, 30000);
 		return 0;
 	}
 
 	if (command == "ls") {
 
-		send(serverSocket, "LIST\r\n", 6, 0);
-		int size = recv(dataSocket, buffer, 2048, 0);
+		char buffer[2048];
 
-		string processedString(buffer);
-		processedString = processedString.substr(0, size);
-		cout << processedString << endl;
+		int size;
+		char message[126];
+
+		ConnectToDataport();
+
+		send(serverSocket, "LIST\r\n", 6, 0);
+
+		size = recv(serverSocket, message, 126, 0);
+		cout << RetrieveMessage(message, size) << endl;
+
+		size = recv(dataSocket, buffer, 2048, 0);
+		cout << RetrieveMessage(buffer, size) << endl;
+
+		size = recv(serverSocket, message, 80, 0);
+		cout << RetrieveMessage(message, size) << endl;
 
 		memset(buffer, 0, 2048);
 		return 0;
