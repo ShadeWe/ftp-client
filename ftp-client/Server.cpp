@@ -198,10 +198,26 @@ int Server::SendFTPcommand(string command) {
 
 		return 0;
 	}
+	
+	if (command.substr(0, 3) == "let") {
+
+		char buffer[2048];
+		char message[200];
+		ConnectToDataport();
+		
+		string ftpCommand = "RETR 5MB.zip\r\n";
+		send(serverSocket, ftpCommand.c_str(), ftpCommand.length(), 0);
+		int length = recv(serverSocket, message, 200, 0);
+		cout << RetrieveMessage(message, length) << endl;
+
+		while (recv(dataSocket, buffer, 2048, 0)) {
+			cout << "data";
+		}
+	}
 
 	if (command.substr(0, 3) == "get") {
 
-		char buffer[30000];
+		char buffer[10000];
 		char message[200];
 
 		ConnectToDataport();
@@ -213,16 +229,17 @@ int Server::SendFTPcommand(string command) {
 		int length = recv(serverSocket, message, 200, 0);
 		cout << RetrieveMessage(message, length) << endl;
 
-		int size = 0;
 		int iResult;
 
+		ofstream fout(filename, ios_base::binary);
 		do {
 			
-			iResult = recv(dataSocket, buffer + size, 30000 - size, 0);
+			iResult = recv(dataSocket, buffer, 10000, 0);
 			if (iResult > 0) {
 				Write("[get] ", LIGHTWHITE);
 				printf("Bytes received: %d\n", iResult);
-				size = size + iResult;
+				fout.write(buffer, iResult);
+				memset(buffer, 0, 10000);
 			}
 			else if (iResult == 0) {
 				Write("[get] ", LIGHTWHITE);
@@ -239,8 +256,6 @@ int Server::SendFTPcommand(string command) {
 		length = recv(serverSocket, message, 200, 0);
 		cout << RetrieveMessage(message, length) << endl;
 
-		ofstream fout(filename, ios_base::binary);
-		fout.write(buffer, size);
 		fout.close();
 
 		return 0;

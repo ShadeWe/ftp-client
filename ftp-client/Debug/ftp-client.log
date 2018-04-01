@@ -1,6 +1,6 @@
 ﻿  Server.cpp
 c:\users\shade\desktop\projects\ftp-client\ftp-client\server.cpp(30): warning C4715: Server::ObtainServerSettings: значение возвращается не при всех путях выполнения
 c:\users\shade\desktop\projects\ftp-client\ftp-client\server.cpp(75): warning C4715: Server::RetrieveResponseCode: значение возвращается не при всех путях выполнения
-c:\users\shade\desktop\projects\ftp-client\ftp-client\server.cpp(147): warning C4715: Server::Connect: значение возвращается не при всех путях выполнения
 c:\users\shade\desktop\projects\ftp-client\ftp-client\server.cpp(184): warning C4715: Server::ConnectToDataport: значение возвращается не при всех путях выполнения
+c:\users\shade\desktop\projects\ftp-client\ftp-client\server.cpp(147): warning C4715: Server::Connect: значение возвращается не при всех путях выполнения
   ftp-client.vcxproj -> C:\Users\Shade\Desktop\projects\ftp-client\Debug\ftp-client.exe
