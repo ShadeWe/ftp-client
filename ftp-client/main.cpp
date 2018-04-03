@@ -27,7 +27,19 @@ int processCommand(string command) {
 		Write("----------------------------- \n", LIGHTWHITE);
 
 		Write("  ls  ", OCEANIC);
-		Write("\t  list all the files on the ftp server you're connected to\n", LIGHTWHITE);
+		Write("\t  list all the files from the remove host\n", LIGHTWHITE);
+
+		Write("  bin  ", OCEANIC);
+		Write("\t  enter the binary mode (needed to download binary files)\n", LIGHTWHITE);
+
+		Write("  delete", OCEANIC);
+		Write("  delete a particular file from the remote host\n", LIGHTWHITE);
+
+		Write("  cd  ", OCEANIC);
+		Write("\t  change the current directory\n", LIGHTWHITE);
+
+		Write("  get  ", OCEANIC);
+		Write("\t  download a file from the remote host\n", LIGHTWHITE);
 
 		cout << endl;
 

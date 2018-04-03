@@ -185,6 +185,41 @@ int Server::ConnectToDataport() {
 
 int Server::SendFTPcommand(string command) {
 
+	if (command.substr(0, 3) == "put") {
+
+		char message[200];
+
+		ConnectToDataport();
+
+		string filename = command.substr(4);
+		string ftpCommand = "STOR " + filename + "\r\n";
+
+		ifstream fin(filename, ios::binary);
+
+		// getting the size of the file
+		fin.seekg(0, fin.end);
+		int length = fin.tellg();
+		fin.seekg(0, fin.beg);
+
+		char * buffer = new char [length];
+
+		fin.read(buffer, length);
+		fin.close();
+
+		int size = 0;
+
+		send(serverSocket, ftpCommand.c_str(), ftpCommand.length(), 0);
+
+		size = recv(serverSocket, message, 200, 0);
+		cout << RetrieveMessage(message, size) << endl;
+
+		send(dataSocket, buffer, length, 0);
+
+		cout << "The file has been uploaded :)\n\n";
+
+		delete [] buffer;
+	}
+
 	if (command.substr(0, 3) == "bin") {
 
 		char buffer[200];
@@ -198,21 +233,31 @@ int Server::SendFTPcommand(string command) {
 
 		return 0;
 	}
-	
-	if (command.substr(0, 3) == "let") {
 
-		char buffer[2048];
+	if (command.substr(0, 6) == "delete") {
+
 		char message[200];
-		ConnectToDataport();
-		
-		string ftpCommand = "RETR 5MB.zip\r\n";
+
+		string filename = command.substr(7);
+		string ftpCommand = "DELE " + filename + "\r\n";
+
 		send(serverSocket, ftpCommand.c_str(), ftpCommand.length(), 0);
 		int length = recv(serverSocket, message, 200, 0);
 		cout << RetrieveMessage(message, length) << endl;
 
-		while (recv(dataSocket, buffer, 2048, 0)) {
-			cout << "data";
-		}
+	}
+
+	if (command.substr(0, 2) == "cd") {
+
+		char message[200];
+
+		string pathname = command.substr(3);
+		string ftpCommand = "CWD " + pathname + "\r\n";
+
+		send(serverSocket, ftpCommand.c_str(), ftpCommand.length(), 0);
+		int length = recv(serverSocket, message, 200, 0);
+		cout << RetrieveMessage(message, length) << endl;
+
 	}
 
 	if (command.substr(0, 3) == "get") {
@@ -232,6 +277,7 @@ int Server::SendFTPcommand(string command) {
 		int iResult;
 
 		ofstream fout(filename, ios_base::binary);
+
 		do {
 			
 			iResult = recv(dataSocket, buffer, 10000, 0);
@@ -261,6 +307,16 @@ int Server::SendFTPcommand(string command) {
 		return 0;
 	}
 
+	if (command == "noop") {
+
+		char message[200];
+
+		int size;
+		send(serverSocket, "NOOP\r\n", 6, 0);
+		size = recv(serverSocket, message, 126, 0);
+
+	}
+
 	if (command == "ls") {
 
 		char buffer[2048];
@@ -275,8 +331,11 @@ int Server::SendFTPcommand(string command) {
 		size = recv(serverSocket, message, 126, 0);
 		cout << RetrieveMessage(message, size) << endl;
 
-		size = recv(dataSocket, buffer, 2048, 0);
-		cout << RetrieveMessage(buffer, size) << endl;
+		do {
+			size = recv(dataSocket, buffer, 2048, 0);
+			cout << RetrieveMessage(buffer, size) << endl;
+		} while (size > 0);
+
 
 		size = recv(serverSocket, message, 80, 0);
 		cout << RetrieveMessage(message, size) << endl;
