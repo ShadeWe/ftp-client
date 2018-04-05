@@ -48,8 +48,15 @@ int processCommand(string command) {
 	
 	if (command == "/connect") {
 
-		server.ObtainServerSettings();
-		server.Connect();
+		if (server.ObtainServerSettings() != -1) {
+			if (server.Connect() == -1) {
+				cout << " the data were specified incorrectly, try again using ";
+				WriteLine("/connect\n", OCEANIC);
+			}
+
+		}
+		else
+			cout << "\n the data are not complete ... \n\n";
 
 	}
 
@@ -83,6 +90,7 @@ int main() {
 			Write(" " + server.GetHostname() + " >> ", OCEANIC);
 		}
 
+		// reading a command from the user
 		getline(cin, command);
 		cout << endl;
 

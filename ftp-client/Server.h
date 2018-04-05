@@ -12,11 +12,14 @@ private:
 	string password;
 	string port;
 
+	string currentMode;
+
 	SOCKET serverSocket;		  // the first socket we connect to and which we send commands through
 	SOCKET dataSocket;			  // the socket we get data from
 
 	char ip_address[15];		  // the ip address the connection has been established to
 	bool isConnectionEstablished; // true when all the required data were specified correctly and the connection has been established.
+
 
 public:
 	// getters

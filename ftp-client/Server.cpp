@@ -14,19 +14,21 @@ string Server::RetrieveMessage(char * buffer, int size) {
 int Server::ObtainServerSettings() {
 	Write("   hostname >> ", DARKPURPLE);
 	getline(cin, hostname);
-	if (cin.eof()) return 0;
+	if (cin.eof()) return -1;
 
 	Write("   username >> ", DARKPURPLE);
 	getline(cin, username);
-	if (cin.eof()) return 0;
+	if (cin.eof()) return -1;
 
 	Write("   password >> ", DARKPURPLE);
 	getline(cin, password);
-	if (cin.eof()) return 0;
+	if (cin.eof()) return -1;
 
 	Write("   port(21) >> ", DARKPURPLE);
 	getline(cin, port);
-	if (cin.eof()) return 0;
+	if (cin.eof()) return -1;
+
+	return 0;
 }
 
 int Server::RetrieveDataPort(string message) {
@@ -69,9 +71,7 @@ int Server::RetrieveResponseCode(string buffer) {
 	try {
 		return stoi(buffer.substr(0, 3));
 	}
-	catch (invalid_argument) {
-		cout << "I can't :(";
-	}
+	catch (invalid_argument) {}
 }
 
 int Server::Connect() {
@@ -83,11 +83,11 @@ int Server::Connect() {
 	char buffer[1024];
 
 	if (RetrieveIPaddress(hostname) == 0) {
-		WriteLine("an error occured while getting the ip address", LIGHTRED);
-		return 0;
+		WriteLine("\t\t\twrong\n", LIGHTRED);
+		return -1;
 	}
 
-	// the address of the server a user is connecting to
+	// the address of the server the user is connecting to
 	SOCKADDR_IN address;
 	address.sin_addr.s_addr = inet_addr(ip_address);
 	address.sin_port = htons(stoi(port));
@@ -102,8 +102,8 @@ int Server::Connect() {
 	recv(serverSocket, buffer, 1024, 0);
 
 	if (RetrieveResponseCode(buffer) != 220) {
-		WriteLine("wrong", LIGHTRED); 
-		return 0;
+		WriteLine("\t\t\twrong", LIGHTRED); 
+		return -1;
 	}
 	else {
 		WriteLine("\t\t\tokay", LIGHTGREEN);
@@ -119,8 +119,8 @@ int Server::Connect() {
 	recv(serverSocket, buffer, 1024, 0);
 
 	if (RetrieveResponseCode(buffer) != 331) {
-		WriteLine("wrong", LIGHTRED);
-		return 0;
+		WriteLine("\t\t\t\twrong \n", LIGHTRED);
+		return -1;
 	}
 	else {
 		WriteLine("\t\t\t\tokay", LIGHTGREEN);
@@ -133,8 +133,8 @@ int Server::Connect() {
 	recv(serverSocket, buffer, 1024, 0);
 
 	if (RetrieveResponseCode(buffer) != 230) {
-		WriteLine("wrong", LIGHTRED);
-		return 0;
+		WriteLine("\t\t\t\twrong\n", LIGHTRED);
+		return -1;
 	}
 	else {
 		WriteLine("\t\t\t\tokay", LIGHTGREEN);
@@ -143,6 +143,8 @@ int Server::Connect() {
 	cout << "\n You have logged on, you are able to continue now" << endl << endl;
 
 	isConnectionEstablished = true;
+
+	return 0;
 
 }
 
@@ -218,6 +220,8 @@ int Server::SendFTPcommand(string command) {
 		cout << "The file has been uploaded :)\n\n";
 
 		delete [] buffer;
+
+		return 0;
 	}
 
 	if (command.substr(0, 3) == "bin") {
@@ -229,6 +233,28 @@ int Server::SendFTPcommand(string command) {
 		
 		if (RetrieveResponseCode(buffer) == 200) {
 			WriteLine("\t\t\t\t\tsuccess!\n", LIGHTGREEN);
+			this->currentMode = "binary";
+		}
+		else {
+			WriteLine("\t\t\t\t\failure!\n", LIGHTRED);
+		}
+
+		return 0;
+	}
+
+	if (command.substr(0, 3) == "ascii") {
+
+		char buffer[200];
+		Write(" Entering the ascii mode ... ", WHITE);
+		send(serverSocket, "TYPE A\r\n", 8, 0);
+		recv(serverSocket, buffer, 100, 0);
+
+		if (RetrieveResponseCode(buffer) == 200) {
+			WriteLine("\t\t\t\t\tsuccess!\n", LIGHTGREEN);
+			this->currentMode = "ascii";
+		}
+		else {
+			WriteLine("\t\t\t\t\failure!\n", LIGHTRED);
 		}
 
 		return 0;
@@ -245,6 +271,8 @@ int Server::SendFTPcommand(string command) {
 		int length = recv(serverSocket, message, 200, 0);
 		cout << RetrieveMessage(message, length) << endl;
 
+		return 0;
+
 	}
 
 	if (command.substr(0, 2) == "cd") {
@@ -258,6 +286,7 @@ int Server::SendFTPcommand(string command) {
 		int length = recv(serverSocket, message, 200, 0);
 		cout << RetrieveMessage(message, length) << endl;
 
+		return 0;
 	}
 
 	if (command.substr(0, 3) == "get") {
@@ -274,7 +303,7 @@ int Server::SendFTPcommand(string command) {
 		int length = recv(serverSocket, message, 200, 0);
 		cout << RetrieveMessage(message, length) << endl;
 
-		int iResult;
+		int iResult = 0;
 
 		ofstream fout(filename, ios_base::binary);
 
@@ -282,10 +311,11 @@ int Server::SendFTPcommand(string command) {
 			
 			iResult = recv(dataSocket, buffer, 10000, 0);
 			if (iResult > 0) {
-				Write("[get] ", LIGHTWHITE);
-				printf("Bytes received: %d\n", iResult);
+				
+				// writting to the file
 				fout.write(buffer, iResult);
 				memset(buffer, 0, 10000);
+
 			}
 			else if (iResult == 0) {
 				Write("[get] ", LIGHTWHITE);
@@ -315,14 +345,38 @@ int Server::SendFTPcommand(string command) {
 		send(serverSocket, "NOOP\r\n", 6, 0);
 		size = recv(serverSocket, message, 126, 0);
 
+		return 0;
+	}
+
+	if (command == "bye" || command == "quit") {
+
+		if (this->isConnectionEstablished != true) {
+			return 0;
+		}
+
+		char message[200];
+		send(serverSocket, "QUIT\r\n", 6, 0);
+		int size = recv(serverSocket, message, 200, 0);
+		cout << RetrieveMessage(message, size) << "\n";
+
+		this->isConnectionEstablished = false;
+
+		return 0;
 	}
 
 	if (command == "ls") {
 
 		char buffer[2048];
+		char message[126];
 
 		int size;
-		char message[126];
+
+		// if the data connection's mode is binary, change it to the ASCII one during executing this command.
+		bool changeBack = false;
+		if (this->currentMode == "binary") {
+			SendFTPcommand("ascii");
+			changeBack = true;
+		}
 
 		ConnectToDataport();
 
@@ -341,14 +395,17 @@ int Server::SendFTPcommand(string command) {
 		cout << RetrieveMessage(message, size) << endl;
 
 		memset(buffer, 0, 2048);
+
+		// change the mode back to the binary one if it was binary before executing the 'ls' command.
+		if (changeBack == true) {
+			SendFTPcommand("bin");
+		}
+
 		return 0;
 	}
 
 	return 0;
 }
-
-
-
 
 bool Server::GetConnectionState() {
 	return this->isConnectionEstablished;
